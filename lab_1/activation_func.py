@@ -33,21 +33,25 @@ class activation_func:
         return n/np.sum(np.exp(self.z))
 
 
-import matplotlib.pyplot as plt
+def main():
+    import matplotlib.pyplot as plt
 
-fig, ax = plt.subplots(1,2, figsize=(6,20))
+    fig, ax = plt.subplots(1,2, figsize=(6,20))
 
-act_func= activation_func(z)
-act_func.sigmoid_fun()
+    act_func= activation_func(z)
+    # act_func.sigmoid_fun()
 
-ax[0].plot(z, act_func.sigmoid_fun(), color='red', label='sigmoid')
-ax[0].plot(z, act_func.tanh_fun(),color='green', label='tanh')
-ax[0].set_title("Sigmoid vs Tanh")
+    ax[0].plot(z, activation_func(z).sigmoid_fun(), color='red', label='sigmoid')
+    ax[0].plot(z, act_func.tanh_fun(),color='green', label='tanh')
+    ax[0].set_title("Sigmoid vs Tanh")
 
-ax[1].plot(z, act_func.ReLU_fun(), color='violet', label='ReLU')
-ax[1].plot(z, act_func.leaky_ReLU_fun(), color='yellow', linestyle='--', label='Leaky ReLU')
-ax[1].set_title("ReLU and leaky ReLU")
-fig.legend()
+    ax[1].plot(z, act_func.ReLU_fun(), color='violet', label='ReLU')
+    ax[1].plot(z, act_func.leaky_ReLU_fun(), color='yellow', linestyle='--', label='Leaky ReLU')
+    ax[1].set_title("ReLU and leaky ReLU")
+    fig.legend()
 
-plt.suptitle("Comparsion of different activation function")
-plt.show()
+    plt.suptitle("Comparsion of different activation function")
+    plt.show()
+
+if __name__=="__main__":
+    main()
