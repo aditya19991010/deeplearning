@@ -1,0 +1,120 @@
+# Backward pass
+'''
+Create N-ary tree
+calculate local and global gradient
+select data structure
+change the global derivative++
+'''
+
+import numpy as np
+
+# Defining functions
+def multiply_gate(x,num):
+    return x*num
+
+def der_multi_gate(global_grad,x,num):
+    q = num*global_grad
+    return q
+
+
+def add_gate(x,y):
+    return x+y
+
+def der_and_gate(global_grad,x,y):
+    return global_grad
+
+def max_gate(x,y):
+    return max(x,y)
+
+def der_max_gate(global_grad,x,y):
+    if x > y:
+        return global_grad*1
+    elif x <y:
+        return global_grad*0
+    else:
+        return "Not defined"
+
+
+n,m = 1,1
+
+Funct_layer = {} #Create a dictionary of functions
+x,y,z,w = 3,-4,2,-1
+
+
+bwd_res = fwd_res = {
+    'f1': 1,
+    'f2': 1,
+    'f3': 1,
+    'f4': 1,
+}
+
+func_args = {
+    'f1': (x, y),
+    'f2': (z, w),
+    'f3': (fwd_res['f1'], fwd_res['f2']),
+    'f4': (fwd_res['f3'], 2)
+}
+
+func_dict = {
+    'f1':(multiply_gate , der_multi_gate),
+    'f2': (max_gate, der_max_gate),
+    'f3': (add_gate, der_and_gate),
+    'f4': (multiply_gate, der_multi_gate) }
+
+
+print('== Forward pass ==' )
+def fwd_pass(func_dict):
+    args_dict= {}
+    for func, (gate_fn, _) in func_dict.items():
+        if func == 'f1':
+            args = (x, y)
+        elif func == 'f2':
+            args = (z, w)
+        elif func == 'f3':
+            args = (fwd_res['f1'], fwd_res['f2'])
+        elif func == 'f4':
+            args = (fwd_res['f3'], 2)
+
+        args_dict[func] = args
+        # Compute and store result
+        fwd_res[func] = gate_fn(*args)
+    return fwd_res, args_dict
+
+
+fwdpass_res, func_args_dict = fwd_pass(func_dict)
+print(f"Dict of computational units: \n{fwdpass_res}\n")
+fwd_mat = np.array(list(fwdpass_res.values()))
+print(f'Fwd pass matrix : {fwd_mat}')
+
+
+print("\n\n== Backward pass ==")
+def bwd_pass(func_dict,func_args_dict):
+    for func, (gate_fn, der_fn) in func_dict.items():
+        if func == 'f1':
+            global_grad = func_args_dict['f3'][1]
+            args = (global_grad, x, y)
+        elif func == 'f2':
+            global_grad = func_args_dict['f3'][1]
+            args = (global_grad,z, w)
+        elif func == 'f3':
+            global_grad = func_args_dict['f4'][1]
+            args = (global_grad, fwd_res['f3'],2)
+        elif func == 'f4':
+            global_grad = 1
+            args = (global_grad, 1, 1)
+
+        # Compute and store result
+            # There are two inputs (f1 and f2) into f3, Hence derivative of f3 will be applicable
+            # to the f1 and f2
+        if func != 'f1' and func != 'f2':
+            bwd_res[func] = der_fn(*args)
+        else:
+            bwd_res[func] = func_dict['f3'][1](*args)
+
+    return bwd_res
+
+bwdpass_res = bwd_pass(func_dict,func_args_dict)
+print(f'Backward pass computational unit: {bwd_res}')
+
+bwd_mat = np.array(list(bwdpass_res.values()))
+print(f'bwd pass matrix : {bwd_mat}')
