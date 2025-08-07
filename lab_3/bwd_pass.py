@@ -16,7 +16,6 @@ def der_multi_gate(global_grad,x,num):
     q = num*global_grad
     return q
 
-
 def add_gate(x,y):
     return x+y
 
