@@ -62,6 +62,9 @@ func_dict = {
 
 
 print('== Forward pass ==' )
+print("Forward pass gates:\n",[func.__name__ for func,der in func_dict.values()],"\n")
+
+print('== Forward pass ==' )
 def fwd_pass(func_dict):
     args_dict= {}
     for func, (gate_fn, _) in func_dict.items():
@@ -87,6 +90,8 @@ print(f'Fwd pass matrix : {fwd_mat}')
 
 
 print("\n\n== Backward pass ==")
+
+print("Back pass derivative gates; Ordered in reverse :\n",[der.__name__ for func,der in func_dict.values()][::-1],"\n")
 def bwd_pass(func_dict,func_args_dict):
     for func, (gate_fn, der_fn) in func_dict.items():
         if func == 'f1':
