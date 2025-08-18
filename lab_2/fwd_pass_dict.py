@@ -45,6 +45,8 @@ func_dict = {
 
 
 print('== Forward pass ==' )
+print("Forward pass gates:\n",[func.__name__ for func in func_dict.values()],"\n")
+
 def fwd_pass(func_dict):
     args_dict= {}
     for func, gate_fn in func_dict.items():
