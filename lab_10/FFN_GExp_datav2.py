@@ -11,7 +11,6 @@ from torch import nn
 df = pd.read_table('GD462.GeneQuantRPKM.50FN.samplename.resk10.txt', sep='\t')
 lm_id = pd.read_csv('map_lm.txt', sep='\t', header=None)
 tg_id = pd.read_csv('map_tg.txt', sep='\t', header=None)
-
 tg_id.columns = lm_id.columns = ['gene_name', 'Gene_Symbol', 'loc']
 
 
@@ -43,7 +42,7 @@ else:
 col_drop = ['TargetID', 'Chr', 'Coord'] # drop columns
 df = df.drop(columns=col_drop)
 
-# ## Subset data for Landmark and target genes
+### Subset data for Landmark and target genes
 df['Gene_Symbol'] = df['Gene_Symbol'].str.split('.').str[0]
 print(df.head(5))
 
@@ -136,7 +135,7 @@ def train_loop(dataloader, model, loss_fn, optimizer):
 
         total_loss += loss.item()
     avg_loss = total_loss / len(dataloader)
-    print(f"Train loss: {avg_loss:.4f}")
+    return f"{avg_loss:.4f}"
 
 def eval_loop(dataloader, model, loss_fn):
     model.eval()
@@ -148,35 +147,34 @@ def eval_loop(dataloader, model, loss_fn):
             loss = loss_fn(pred, y_batch)
             total_loss += loss.item()
     avg_loss = total_loss / len(dataloader)
-    print(f"Val loss: {avg_loss:.4f}")
+    return f"{avg_loss:.4f}"
 
 # Training on validation dataset
-
 for epoch in range(epochs):
-    train_loop(train_loader, model, loss_fn, optimizer)
-    eval_loop(val_loader, model, loss_fn)
+    train_loss = train_loop(train_loader, model, loss_fn, optimizer)
+    val_loss = eval_loop(val_loader, model, loss_fn)
     if epoch %100 == 0:
-        print(f"Epoch {epoch + 1}/{epochs}")
+        print(f"Epoch {epoch + 1}/{epochs}; Train loss: {train_loss}")
+        print(f"Epoch {epoch + 1}/{epochs}; Val   loss: {val_loss}\n")
+
+import matplotlib.pyplot as plt
+predicted = model(X_train_tensor)
+plt.plot(X_train_tensor, y_train_tensor, 'ro', label='Original data')
+plt.plot(X_train_tensor, predicted, label='Fitted line')
+plt.legend()
+plt.show()
+
 
 print("Training complete.")
 test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-print("\nFinal evaluation on val set:")
-eval_loop(test_loader, model, loss_fn)
-
+print("\nFinal evaluation on test set:")
+test_loss = eval_loop(test_loader, model, loss_fn)
+print("Test: ",test_loss)
 
 
 
 # Generate stats
 # Train full model
-print("Training complete.")
-test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-test_loader = DataLoader(test_dataset, batch_size=batch_size)
-
-print("\nFinal evaluation on val set:")
-eval_loop(test_loader, model, loss_fn)
-
-
-# Generate statistics
 # Conclusion
