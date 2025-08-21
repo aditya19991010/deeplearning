@@ -4,7 +4,7 @@
 import numpy as np
 
 ## Function for CNN
-def CNN(df,ker,p,s):
+def CNN_maxpool(df,ker,p,s):
     '''
 
     :param df: Input Dataframe
@@ -62,7 +62,7 @@ def main():
 
     print(f'\nParam used:{params}')
     print('\nNew Matrix after CNN')
-    print(CNN(df,ker,p,s))
+    print(CNN_maxpool(df,ker,p,s))
 
 if __name__=="__main__":
     main()
