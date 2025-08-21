@@ -5,6 +5,10 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
 from torch import nn
+from torch.utils.data import TensorDataset, DataLoader
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 # Import data
 df = pd.read_table('GD462.GeneQuantRPKM.50FN.samplename.resk10.txt', sep='\t')
@@ -63,89 +67,107 @@ X_train_val, X_val_test_val, y_train_val, y_test_val = train_test_split(X_train_
 
 print(X_train_val.shape,y_train_val.shape) #(216, 943) (93, 9520)
 
-# Model training
-feat_train = torch.from_numpy(X_train_val.values)
-targ_train = torch.from_numpy(y_train_val.values)
+# Data loading and converting to tensor
+X_train_temp_ten = torch.tensor(X_train_temp.values,dtype=torch.float32)
+X_test_ten = torch.tensor(X_test.values,dtype=torch.float32)
+X_train_val_ten = torch.tensor(X_train_val.values,dtype=torch.float32)
 
-feat_train_shape = feat_train.shape
-targ_train_shape = targ_train.shape
+y_test_ten = torch.tensor(y_test.values,dtype=torch.float32)
+y_train_temp_ten = torch.tensor(y_train_temp.values,dtype=torch.float32)
+y_train_val_ten = torch.tensor(y_train_val.values,dtype=torch.float32)
+
+
+val_data = TensorDataset(X_train_val_ten, y_train_val_ten)
+test_data = TensorDataset(X_test_ten, y_test_ten)
+train_data = TensorDataset(X_train_temp_ten, y_train_temp_ten)
+
+batch_size = 64
+train_load = DataLoader(train_data, batch_size=64,shuffle=True)
+test_load = DataLoader(test_data, batch_size=64,shuffle=True)
+val_load = DataLoader(val_data, batch_size=64,shuffle=True)
 
 ### setting up device
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 print(f"Using {device} device")
 
-class NeuralNetwork(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(NeuralNetwork, self).__init__()
+# Set class
+
+class NN(nn.Module):
+    def __init__(self, inp_dim, out_dim):
+        super(NN,self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(inp_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(64,32),
             nn.ReLU(),
-            nn.Linear(64, output_dim)
+            nn.Linear(32, out_dim)
         )
 
-
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
-# Hyper parameter tuning
-model = NeuralNetwork(943,9520 ).to(device)
-learning_rate = 1e-3
-batch_size = 64
-epochs = 5
-
-## loss function
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    def forward(self,x):
+        return self.model(x)
 
 
-def train_loop(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset)
-    # Set the model to training mode - important for batch normalization and dropout layers
-    # Unnecessary in this situation but added for best practices
+# set params
+inp_dim = X.shape[1]
+outdim = y.shape[1]
+model = NN(inp_dim,outdim).to(device)
+
+## Hyperparameter
+lr = 0.01
+loss_func = nn.MSELoss()
+optim = torch.optim.Adam(model.parameters(), lr)
+epochs = 1000
+
+
+# define train loop
+def train_loop(dataloader, model, lossfun, optimizer):
     model.train()
-    for batch, (X, y) in enumerate(dataloader):
-        # Compute prediction and loss
-        pred = model(X)
-        loss = loss_fn(pred, y)
+    tot_loss =0
+    for X_batch, y_batch in dataloader:
+        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+        pred = model(X_batch)
+        loss = lossfun(pred, y_batch)
 
-        # Backpropagation
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), batch * batch_size + len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        tot_loss +=loss
+    ave_loss = tot_loss/len(dataloader)
+    return ave_loss
 
-
-def test_loop(dataloader, model, loss_fn):
-    # Set the model to evaluation mode - important for batch normalization and dropout layers
-    # Unnecessary in this situation but added for best practices
+def eval_loop(dataloader, model, lossfun, optimizer):
     model.eval()
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    test_loss, correct = 0, 0
+    tot_loss = 0
+    for X_batch, y_batch in dataloader:
+        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+        pred = model(X_batch)
+        loss = lossfun(pred,y_batch)
+        tot_loss += loss
+    ave_loss = tot_loss/len(dataloader)
+    return  ave_loss
 
-    # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
-    # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
-    with torch.no_grad():
-        for X, y in dataloader:
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-
-    test_loss /= num_batches
-    correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-
-print("Done!")
+train_loss_arr = []
+test_loss_arr = []
+for i in range(epochs):
+    train_loss_epoch = train_loop(train_load, lossfun=loss_func, optimizer=optim, model=model)
+    test_loss_epoch = eval_loop(test_load, lossfun=loss_func, optimizer=optim, model=model)
+    train_loss_arr.append(train_loss_epoch.item() if isinstance(train_loss_epoch, torch.Tensor) else train_loss_epoch)
+    test_loss_arr.append(test_loss_epoch.item() if isinstance(test_loss_epoch, torch.Tensor) else test_loss_epoch)
+    if i%100==0:
+        print(f"\nEpoch {i+1}")
+        print(f'Train loss : {train_loss_epoch}')
+        print(f'Test loss : {test_loss_epoch}')
 
 
-# Generate stats
-# Train full model
-# Generate statistics
-# Conclusion
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.plot(train_loss_arr, label='Train Loss', linewidth=2)
+plt.plot(test_loss_arr, label='test Loss', linewidth=2)
+plt.xlabel('Epoch')
+plt.ylabel('MSE Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.grid(True)
+
+plt.savefig('Train_test_loss.png')
