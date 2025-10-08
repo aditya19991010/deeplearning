@@ -6,7 +6,6 @@ import numpy as np
 ## Function for CNN
 def CNN_maxpool(df,ker,p,s):
     '''
-
     :param df: Input Dataframe
     :param ker: Filter used
     :return: generated matrix after using kernel
@@ -23,9 +22,9 @@ def CNN_maxpool(df,ker,p,s):
 
 
     # Initiating matrix calculation
-    for x in range(0,len(mat),s):
-        for y in range(0,len(mat),s):
-            df_temp_1 = df_temp[x:kn+x, y:km+y]
+    for x in range(0,len(mat)):
+        for y in range(0,len(mat)):
+            df_temp_1 = df_temp[x*s:kn+x*s, y*s:km+y*s]
             res = df_temp_1 * ker
             mat[x, y] = res.flatten().max()
     return mat
@@ -40,7 +39,7 @@ def main():
         [5,6,1,2,9]
     ]
 
-    kernel = [
+    kernel_1 = [
     [1,1,1],
     [1,1,1],
     [1,1,1]
@@ -48,7 +47,7 @@ def main():
 
     ## Data pre-processing
     df = np.array(dataset)
-    ker = np.array(kernel)
+    ker = np.array(kernel_1)
 
     p = 0
     s = 1

@@ -24,9 +24,9 @@ def CNN(df,ker,p,s):
 
 
     # Initiating matrix calculation
-    for x in range(0,len(mat),s):
-        for y in range(0,len(mat),s):
-            df_temp_1 = df_temp[x:kn+x, y:km+y]
+    for x in range(0,len(mat)):
+        for y in range(0,len(mat)):
+            df_temp_1 = df_temp[x*s:kn+x*s, y*s:km+y*s]
             res = df_temp_1 * ker
             mat[x, y] = res.flatten().sum()
     return mat
@@ -65,6 +65,12 @@ def main():
     print(f'\nParam used:{params}')
     print('\nNew Matrix after CNN')
     print(CNN(df,ker,p,s))
+
+    print('\nWorking on the image')
+    df = np.random.randint(0, 256, size=(32, 32), dtype=np.uint8)
+    print(CNN(df,ker,p,s))
+
+
 
 if __name__=="__main__":
     main()

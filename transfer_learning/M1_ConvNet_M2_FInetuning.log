@@ -1,0 +1,75 @@
+(DL_lab) workshop@IBAB-Workshop-Comp011:~/learning/deeplearning/transfer_learning$ python3.12 m1_m2_res18_to_cifar10_p1.py
+Setting params...
+
+Transform - Normalization - loading...
+
+
+TRAINING MODEL
+
+	Model 1 - ConvNet as fixed feature extractor
+/home/workshop/miniconda3/envs/DL_lab/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Starting training with 5 epochs...
+
+	Epoch 0
+Train loss: 0.051| acc: 69.336
+Test loss: 	0.049 | acc: 70.770
+
+Model saved to 'DL_model_checkpoint_1756985642'
+
+	Epoch 1
+Train loss: 0.048| acc: 71.026
+Test loss: 	0.049 | acc: 70.870
+
+Model saved to 'DL_model_checkpoint_1756986410'
+
+	Epoch 2
+Train loss: 0.045| acc: 71.917
+Test loss: 	0.055 | acc: 70.147
+
+Model saved to 'DL_model_checkpoint_1756987183'
+
+	Epoch 3
+Train loss: 0.044| acc: 72.408
+Test loss: 	0.052 | acc: 71.273
+
+Model saved to 'DL_model_checkpoint_1756987949'
+
+	Epoch 4
+Train loss: 0.044| acc: 72.716
+Test loss: 	0.049 | acc: 71.762
+
+Model saved to 'DL_model_checkpoint_1756988712'
+
+	Model 2 - Finetuning the ConvNet
+Starting training with 5 epochs...
+
+	Epoch 0
+Train loss: 0.041| acc: 22.794
+Test loss: 	0.028 | acc: 33.280
+
+Model saved to 'DL_model_checkpoint_1756990467'
+
+	Epoch 1
+Train loss: 0.034| acc: 29.844
+Test loss: 	0.027 | acc: 37.465
+
+Model saved to 'DL_model_checkpoint_1756992242'
+
+	Epoch 2
+Train loss: 0.031| acc: 34.685
+Test loss: 	0.025 | acc: 40.697
+
+Model saved to 'DL_model_checkpoint_1756994000'
+
+	Epoch 3
+Train loss: 0.028| acc: 38.230
+Test loss: 	0.024 | acc: 43.055
+
+Model saved to 'DL_model_checkpoint_1756995760'
+
+	Epoch 4
+Train loss: 0.027| acc: 41.287
+Test loss: 	0.024 | acc: 45.036
+
+Model saved to 'DL_model_checkpoint_1756997521'
