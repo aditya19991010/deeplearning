@@ -1,0 +1,36 @@
+Index(['Entry', 'Reviewed', 'Entry Name', 'Protein names', 'Gene Names',
+       'Organism', 'Length', 'Protein families', 'Sequence'],
+      dtype='object')
+['GPCR' 'P450' 'Ferritin' 'Protease']
+                                            Sequence Protein families  label
+0  MESMPSSLTHQRFGLLNKHLTRTGNTREGRMHTPPVLGFQAIMSNV...             GPCR      1
+1  MSNFTPDACNVDSGLDSVLPPSLYALVFTLGLPANLLALWAAWLQV...             GPCR      1
+2  MNAMDNMTADYSPDYFDDAVNSSMCEYDEWEPSYSLIPVLYMLIFI...             GPCR      1
+3  MPGPLRLLCFFALGLLGSAGPSGAAPPLCAAPCSCDGDRRVDCSGK...             GPCR      1
+4  MGSGISSESKESAKRSKELEKKLQEDAERDARTVKLLLLGAGESGK...             GPCR      1
+
+Average seq length: 538.0
+
+This length will be useful for truncating and padding the sequencing for constant embeddings
+Total amino acids: 20
+Set Sequence length=400
+/usr/local/lib/python3.12/dist-packages/sklearn/preprocessing/_label.py:110: DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel().
+  y = column_or_1d(y, warn=True)
+
+X shape: (10098, 10)
+y shape: (10098,)
+
+Preparing Tensor dataset...
+Model n_class: 4
+
+Training for 10 epochs...
+Epoch 1/10: Train Loss = 0.7805, Test Loss = 0.6898
+Epoch 2/10: Train Loss = 0.6282, Test Loss = 0.6143
+Epoch 3/10: Train Loss = 0.5293, Test Loss = 0.5391
+Epoch 4/10: Train Loss = 0.4507, Test Loss = 0.5009
+Epoch 5/10: Train Loss = 0.4136, Test Loss = 0.4940
+Epoch 6/10: Train Loss = 0.3900, Test Loss = 0.4996
+Epoch 7/10: Train Loss = 0.3459, Test Loss = 0.4786
+Epoch 8/10: Train Loss = 0.3139, Test Loss = 0.4650
+Epoch 9/10: Train Loss = 0.2970, Test Loss = 0.4616
+Epoch 10/10: Train Loss = 0.2874, Test Loss = 0.4611
