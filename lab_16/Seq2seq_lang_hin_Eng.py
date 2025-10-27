@@ -1,5 +1,4 @@
 # Sequence to Sequence Learning using RNN --  machine translation -- Hindi English
-from itertools import islice
 
 import numpy as np
 import torch
