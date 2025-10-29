@@ -7,10 +7,10 @@ from torch.utils.data import TensorDataset
 device='cpu'
 ## Data processing
 
-df_gpcr = pd.read_table("family_wise/uniprotkb_protein_name_GPCR_OR_protein_2025_10_23.tsv", sep='\t')
-df_p450 = pd.read_table("family_wise/uniprotkb_protein_name_P450_AND_reviewe_2025_10_23.tsv", sep='\t')
-df_ferritin = pd.read_table("family_wise/uniprotkb_protein_name_Ferritin_OR_prot_2025_10_23.tsv", sep='\t')
-df_protease = pd.read_table("family_wise/uniprotkb_protein_name_Protease_AND_rev_2025_10_23.tsv", sep='\t')
+df_gpcr = pd.read_table("/content/uniprotkb_protein_name_GPCR_OR_protein_2025_10_23.tsv", sep='\t')
+df_p450 = pd.read_table("/content/uniprotkb_protein_name_P450_AND_reviewe_2025_10_23.tsv", sep='\t')
+df_ferritin = pd.read_table("/content/uniprotkb_protein_name_Ferritin_OR_prot_2025_10_23.tsv", sep='\t')
+df_protease = pd.read_table("/content/uniprotkb_protein_name_Protease_AND_rev_2025_10_23.tsv", sep='\t')
 
 df_gpcr.iloc[:,-2] = "GPCR"
 df_p450.iloc[:,-2] = "P450"
@@ -26,8 +26,11 @@ print(df_main['Protein families'].unique())
 
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-le = LabelEncoder()
-df_main.loc[:, 'label'] = le.fit_transform(df_main['Protein families'])
+label2enc = { val:indx for indx, val in enumerate(df_main['Protein families'].unique())}
+enc2label = { indx:val for indx, val in enumerate(df_main['Protein families'].unique())}
+
+lab_df = pd.DataFrame.from_dict(label2enc,orient='index').reset_index(drop=False)
+df_main['label'] = df_main['Protein families'].map(label2enc)
 
 print(df_main.head())
 
@@ -100,7 +103,7 @@ def tokenization(sequence, aa2idx, seq_len_min=10):
 
 
 # dataset = pd.DataFrame()
-n_seqs = np.random.randint(0,len(df_main), size=len(df_main)) ##Randomly selecting samples
+n_seqs = np.random.randint(0,len(df_main), size=1000) ##Randomly selecting samples
 sequences = df_main.iloc[n_seqs,[0,2]]
 
 X = []
@@ -121,7 +124,7 @@ print(f"y shape: {y.shape}")  # Should be (n_samples,)
 ## preparing dataset
 
 # Split
-X_train, X_test, y_train, y_test = train_test_split(np.array(X), np.array(y), test_size=0.2)
+X_train, X_test, y_train, y_test = train_test_split(np.array(X), np.array(y), test_size=0.33)
 
 # Convert to tensors
 
@@ -159,10 +162,10 @@ class LSTM_model(nn.Module):
             bidirectional=True,
             batch_first=True
         )
-        self.dropouts = nn.Dropout(0.3 )
+        self.batch_norm = nn.BatchNorm1d(hid_dim * 2)
+        self.dropouts = nn.Dropout(0.5 )
 
         self.fc = nn.Linear(hid_dim*2,n_class)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self,x):
         embedded= self.embeddings(x)
@@ -173,6 +176,8 @@ class LSTM_model(nn.Module):
         h_back = h_n[-1,:,:]
 
         h_cat = torch.cat((h_for, h_back), dim=1)
+        h_cat = self.batch_norm(h_cat)
+        h_cat = self.dropouts(h_cat)
         logits = self.fc(h_cat)
         return logits
 
@@ -181,6 +186,7 @@ class LSTM_model(nn.Module):
 def training_loop(dataloader, model, loss_func, optimizer):
     model.train()
     total_loss = 0
+    correct = 0
     for X_data,Y_data in dataloader:
         X_data,Y_data = X_data.to(device), Y_data.to(device)
 
@@ -190,16 +196,19 @@ def training_loop(dataloader, model, loss_func, optimizer):
         loss = loss_func(outputs, Y_data)
         loss.backward()
         optimizer.step()
-
+        _,predicted = outputs.max(1)
+        correct += predicted.eq(Y_data).sum().item()
         total_loss += loss.item()
     # print(f"Epoch {epoch+1}, Loss: {total_loss/len(train_loader):.4f}")
+    accuracy = 100* correct/len(dataloader.dataset)
 
-    return total_loss / len(dataloader)
+    return total_loss / len(dataloader), accuracy
 
 
 def eval_loop(dataloader, model, loss_func):
     model.eval()
     total_loss = 0
+    correct = 0
     with torch.no_grad():
         for X_data, Y_data in dataloader:
             X_data, Y_data = X_data.to(device), Y_data.to(device)
@@ -208,27 +217,66 @@ def eval_loop(dataloader, model, loss_func):
 
             loss = loss_func(outputs, Y_data)
             total_loss += loss.item()
+
+            _, predicted = outputs.max(1)
+            correct += predicted.eq(Y_data).sum().item()
         # print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_loader):.4f}")
+    accuracy = 100 * correct/len(dataloader.dataset)
+    return total_loss / len(dataloader) , accuracy
 
-    return total_loss / len(dataloader)
-
-epoch=10
+epoch=15
 
 print("Model n_class:", len(set(y)))
 model = LSTM_model(vocab_size=vocab_size,n_class=len(set(y)),emb_dim=64, hid_dim=128,n_layer=3).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-loss_func = nn.CrossEntropyLoss()
+loss_func = nn.CrossEntropyLoss(label_smoothing=0.1)
+
 
 train_loss_hist = []
 test_loss_hist = []
 
 print(f"\nTraining for {epoch} epochs...")
 for ep in range(epoch):
-    train_loss = training_loop(train_data, model, loss_func, optimizer)
-    test_loss = eval_loop(test_data, model, loss_func)
-
+    train_loss, train_acc = training_loop(train_data, model, loss_func, optimizer)
     train_loss_hist.append(train_loss)
+
+    test_loss,test_acc = eval_loop(test_data, model, loss_func)
     test_loss_hist.append(test_loss)
 
-    if (ep + 1) % 1 == 0:
-        print(f"Epoch {ep + 1}/{epoch}: Train Loss = {train_loss:.4f}, Test Loss = {test_loss:.4f}")
+    if (ep + 1) % 5 == 0:
+        print(f"Epoch {ep + 1}/{epoch}: Train Loss = {train_loss:.4f}, Accuracy = {train_acc:.4f}")
+        print(f"Epoch {ep + 1}/{epoch}: Test Loss = {test_loss:.4f}, Test Loss = {test_acc:.4f}")
+
+
+##Inference
+
+def predict_protein_family(sequence, model, aa2vec_dict, enc2label, seq_len_min, device):
+    model.eval()  # Set the model to evaluation mode
+    with torch.no_grad():
+        # Tokenize and encode the sequence
+        encoded_sequence = tokenization(sequence, aa2vec_dict, seq_len_min=seq_len_min)
+
+        # Convert to tensor and add a batch dimension
+        sequence_tensor = torch.tensor(encoded_sequence, dtype=torch.long).unsqueeze(0).to(device)
+
+        # Get model output
+        outputs = model(sequence_tensor)
+
+        # Get the predicted class index
+        _, predicted_index = torch.max(outputs, dim=1)
+
+        # Convert the predicted index back to the protein family label
+        predicted_label = enc2label[predicted_index.item()]
+
+        return predicted_label
+
+
+
+seq_len_min=400
+for x in range(10):
+    sample_sequence = df_main.iloc[x]['Sequence']
+    print(f"Sample sequence: {sample_sequence[:seq_len_min]}") # Print first 50 characters
+
+    predicted_family = predict_protein_family(sample_sequence, model, aa2vec_dict, enc2label, seq_len_min, device)
+
+    print(f"Predicted protein family: {predicted_family}")
