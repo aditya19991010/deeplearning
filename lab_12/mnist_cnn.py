@@ -7,53 +7,9 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision import transforms
 import numpy as np
 
-device = torch.device("cpu")
+device = torch.device("cuda")
 
-# Import data
-df = mnist.load_data()
-
-(X_train, y_train), (X_test, y_test) =  df
-data = [X_train, y_train ,X_test, y_test]
-
-# Data preprocessing
-print('X_train:', X_train.shape)
-print('y_train:', y_train.shape)
-print('X_test:', X_test.shape)
-print('y_test:', y_test.shape)
-
-# Data standardatization
-# from sklearn.preprocessing import StandardScaler
-# X_train = StandardScaler().fit_transform(X_train)
-
-#
-torch.manual_seed(42)
-
-## Convert np to tensor
-X_train_ten = torch.tensor(X_train, dtype=torch.float32).unsqueeze(1) / 255.0  # -> (60000, 1, 28, 28)
-X_test_ten  = torch.tensor(X_test, dtype=torch.float32).unsqueeze(1) / 255.0   # -> (10000, 1, 28, 28)
-y_train_ten = torch.tensor(y_train, dtype=torch.long)
-y_test_ten  = torch.tensor(y_test, dtype=torch.long)
-
-print('\nConvert data to tensor')
-
-# transform data
-transform = transforms.Normalize(mean=[0.5], std=[0.5])
-X_train_ten = transform(X_train_ten)
-X_test_ten = transform(X_test_ten)
-
-
-## Convert tensor to tensor dataset
-train_df = TensorDataset(X_train_ten, y_train_ten)
-test_df = TensorDataset(X_test_ten, y_test_ten)
-print('\nConvert tensor to tensor dataset')
-
-
-## Data loading
-train_load = DataLoader(train_df,batch_size=64, shuffle=True)
-test_load = DataLoader(test_df,batch_size=64, shuffle=True)
-print('\nData loaded successfully')
-
-
+## Model 
 class CNN(nn.Module):
     def __init__(self, op=10):
         super(CNN, self).__init__()
@@ -81,24 +37,6 @@ class CNN(nn.Module):
         x = torch.flatten(x,1)
         x = self.classifier(x)
         return x
-
-
-model = CNN(op=10).to(device).to(torch.float64)
-
-
-
-## Set model hyper param
-l,n,m = X_train.shape
-p = y_train.shape[0]
-lr = 0.01
-batch = 64
-epoch=5
-
-loss_func = nn.CrossEntropyLoss()
-optim=torch.optim.Adam(model.parameters(), lr)
-
-model = model.to(torch.float32)
-
 
 
 ## Training loop
@@ -143,33 +81,95 @@ def eval_loop(model, loss_fn, dataloader):
     ave_loss = tot_loss/len(dataloader)
     return ave_loss
 
-## Training with multiple epoch
 
-train_loss_tot = []
-test_loss_tot = []
+def main():
+  # Import data
+  df = mnist.load_data()
 
-print(f"Starting training with {epoch} epochs... ")
-for i in range(epoch):
-    tr_loss = training_loop(train_load, loss_func, optim, model)
-    te_loss = eval_loop(model,loss_func,test_load)
+  (X_train, y_train), (X_test, y_test) =  df
+  data = [X_train, y_train ,X_test, y_test]
 
-    train_loss_tot.append(tr_loss)
-    test_loss_tot.append(te_loss)
-    print(f"\tEpoch {i}")
-    print(f"Train loss: \t{tr_loss}")
-    print(f"Test loss: \t{te_loss}")
+  # Data preprocessing
+  print('X_train:', X_train.shape)
+  print('y_train:', y_train.shape)
+  print('X_test:', X_test.shape)
+  print('y_test:', y_test.shape)
 
-    if i%100==0:
-        print(f"\nEpoch {i}")
-        print(f"Train loss at Epoch {i} = {np.mean(train_loss_tot)}")
-        print(f"Test loss at Epoch {i} = {np.mean(test_loss_tot)}")
+  # Data standardatization
+
+  torch.manual_seed(42)
+
+  ## Convert np to tensor and reshaping the size
+  X_train_ten = torch.tensor(X_train, dtype=torch.float32).unsqueeze(1) / 255.0  # -> (60000, 1, 28, 28)
+  X_test_ten  = torch.tensor(X_test, dtype=torch.float32).unsqueeze(1) / 255.0   # -> (10000, 1, 28, 28)
+  y_train_ten = torch.tensor(y_train, dtype=torch.long)
+  y_test_ten  = torch.tensor(y_test, dtype=torch.long)
+
+  print('\nConvert data to tensor')
+
+  ## transform data
+  transform = transforms.Normalize(mean=[0.5], std=[0.5])
+  X_train_ten = transform(X_train_ten)
+  X_test_ten = transform(X_test_ten)
+
+
+  ## Convert tensor to tensor dataset
+  train_df = TensorDataset(X_train_ten, y_train_ten)
+  test_df = TensorDataset(X_test_ten, y_test_ten)
+  print('\nConvert tensor to tensor dataset')
+
+
+  ## Data loading
+  train_load = DataLoader(train_df,batch_size=64, shuffle=True)
+  test_load = DataLoader(test_df,batch_size=64, shuffle=True)
+  print('\nData loaded successfully')
+
+
+  ## Set up models
+  model = CNN(op=10).to(device).to(torch.float64)
+
+
+  ## Set model hyper param
+  l,n,m = X_train.shape
+  p = y_train.shape[0]
+  lr = 0.01
+  batch = 64
+  epoch=5
+
+  loss_func = nn.CrossEntropyLoss()
+  optim=torch.optim.Adam(model.parameters(), lr)
+
+  model = model.to(torch.float32)
+  ## Training with multiple epoch
+
+  train_loss_tot = []
+  test_loss_tot = []
+
+  print(f"Starting training with {epoch} epochs... ")
+  for i in range(epoch):
+      tr_loss = training_loop(train_load, loss_func, optim, model)
+      te_loss = eval_loop(model,loss_func,test_load)
+
+      train_loss_tot.append(tr_loss)
+      test_loss_tot.append(te_loss)
+      print(f"\n\tEpoch {i}")
+      print(f"Train loss: \t{tr_loss}")
+      print(f"Test loss: \t{te_loss}")
+
+      if i%100==0:
+          print(f"\nEpoch {i}")
+          print(f"Train loss at Epoch {i} = {np.mean(train_loss_tot)}")
+          print(f"Test loss at Epoch {i} = {np.mean(test_loss_tot)}")
 
 
 
-plt.plot(train_loss_tot, label='train')
-plt.plot(test_loss_tot, label='test')
-plt.legend()
-plt.xlabel("Epoch")
-plt.ylabel('Loss')
-plt.title('Training and Test Loss')
-plt.show()
+  plt.plot(train_loss_tot, label='train')
+  plt.plot(test_loss_tot, label='test')
+  plt.legend()
+  plt.xlabel("Epoch")
+  plt.ylabel('Loss')
+  plt.title('Training and Test Loss')
+  plt.show()
+
+if __name__ == "__main__":
+    main()
