@@ -43,7 +43,7 @@ class CNN(nn.Module):
 def training_loop(dataloader,loss_func, optim, model):
     model.train()
     tot_loss = 0
-
+    correct=0
     # iterate through each batch of the dataloader
     # print(f'Training model...')
     for X_train, y_train in dataloader:
@@ -59,26 +59,33 @@ def training_loop(dataloader,loss_func, optim, model):
         optim.zero_grad()
         loss.backward()
         optim.step()
+        _,predicted = pred.max(1)
+        correct += predicted.eq(y_train).sum().item()
 
         tot_loss +=loss.item()
     # print(f'\nCalculating loss...')
     ave_loss = tot_loss/len(dataloader)
+    print(f'\nTrain Accuracy: {correct/len(dataloader.dataset)}')
+
     return ave_loss
 
 def eval_loop(model, loss_fn, dataloader):
     model.eval()
     tot_loss = 0
+    correct =0
     # print(f'\nEvaluating model...')
     for X_test, y_test in dataloader:
         X_test, y_test = X_test.to(device), y_test.to(device)
 
         pred = model(X_test)
         loss = loss_fn(pred, y_test)
-
+        _,predicted = pred.max(1)
+        correct += predicted.eq(y_test).sum().item()
         tot_loss +=loss.item()
 
     # print(f'\nCalculating loss...')
     ave_loss = tot_loss/len(dataloader)
+    print(f'\nTest Accuracy: {correct/len(dataloader.dataset)}')
     return ave_loss
 
 
